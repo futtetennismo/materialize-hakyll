@@ -29,13 +29,13 @@ main = hakyllWith hakyllConfig $ do
       >>= loadAndApplyTemplate "templates/default.html" defaultContext
       >>= relativizeUrls
 
-  tags <- buildTags "posts/*" (fromCapture "tags/*.html")
+  tags <- buildTags "posts/**" (fromCapture "tags/*.html")
   createTagsRules tags (\xs -> "Posts tagged \"" ++ xs ++ "\"")
 
-  categories <- buildCategories "posts/*" (fromCapture "categories/*.html")
+  categories <- buildCategories "posts/**" (fromCapture "categories/*.html")
   createTagsRules categories (\xs -> "Posts categorised as \"" ++ xs ++ "\"")
 
-  match "posts/*" $ do
+  match "posts/**" $ do
     route $ setExtension "html"
     let
       namedTags =
@@ -102,7 +102,7 @@ main = hakyllWith hakyllConfig $ do
         >>= loadAndApplyTemplate "templates/sitemap.xml" sitemapCtx
         >>= relativizeUrls
 
-  match (fromList ["robots.txt", "CNAME"]) $ do
+  match "robots.txt" $ do
     route idRoute
     compile $ getResourceBody >>= relativizeUrls
 
