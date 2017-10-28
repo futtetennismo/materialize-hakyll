@@ -1,6 +1,6 @@
 ---
 title: S.P.Q.R.
-tag: latin, template
+tags: dummy
 ---
 
 Mauris in lorem nisl. Maecenas tempus facilisis ante, eget viverra nisl

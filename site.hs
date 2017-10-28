@@ -29,13 +29,13 @@ main = hakyllWith hakyllConfig $ do
       >>= loadAndApplyTemplate "templates/default.html" defaultContext
       >>= relativizeUrls
 
-  tags <- buildTags "posts/**" (fromCapture "tags/*.html")
+  tags <- buildTags "posts/*" (fromCapture "tags/*.html")
   createTagsRules tags (\xs -> "Posts tagged \"" ++ xs ++ "\"")
 
-  categories <- buildCategories "posts/**" (fromCapture "categories/*.html")
+  categories <- buildCategories "posts/*" (fromCapture "categories/*.html")
   createTagsRules categories (\xs -> "Posts categorised as \"" ++ xs ++ "\"")
 
-  match "posts/**" $ do
+  match "posts/*" $ do
     route $ setExtension "html"
     let
       namedTags =
@@ -62,7 +62,7 @@ main = hakyllWith hakyllConfig $ do
   match "pages/index.html" $ do
     route (constRoute "index.html")
     compile $ do
-      posts <- recentFirst =<< loadAll "posts/**"
+      posts <- recentFirst =<< loadAll "posts/*"
       let
         indexCtx =
           listField "posts" postCtx (return posts)
@@ -104,10 +104,6 @@ main = hakyllWith hakyllConfig $ do
 
   match (fromList ["robots.txt", "CNAME"]) $ do
     route idRoute
-    compile $ getResourceBody >>= relativizeUrls
-
-  match "pages/google3f1f5a1db3d4b0ba.html" $ do
-    route (constRoute "google3f1f5a1db3d4b0ba.html")
     compile $ getResourceBody >>= relativizeUrls
 
 
@@ -162,6 +158,7 @@ atomFeedConfiguration =
                     }
 
 
+-- Friendlier config when using docker
 hakyllConfig :: Configuration
 hakyllConfig =
   defaultConfiguration{ previewHost = "0.0.0.0" }
