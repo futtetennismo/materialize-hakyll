@@ -1,0 +1,23 @@
+general:
+  base_url: "https://materialize-hakyll.github.io"
+  head_title: Materialize Hakyll
+  site_title: Materialize Hakyll
+  paginate: 7
+
+# Colour (css class, see: http://materializecss.com/color.html)
+style:
+  header_colour: "indigo lighten-1"
+  # MUST in hex format, may the same as header-colour. This colour is for android chrome browser.
+  head_theme_colour: "#5c6bc0"
+  footer_colour: "indigo lighten-1"
+  footer_btn_colour: "indigo lighten-2"
+  footer_link_colour: "red-text text-accent-1"
+  navbar_text_colour_desktop: white-text
+  navbar_text_colour_mobile: waves-effect waves-teal black-text"
+
+feed:
+  title: "Materialize Hakyll"
+  description: "This theme is a fork of [materialize-jekyll](https://github.com/mumuxme/materialize-jekyll)"
+  author_name: "futtetennista"
+  author_email: "futtetennista@gmail.com"
+  root: "https://materialize-hakyll.github.io"

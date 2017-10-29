@@ -4,10 +4,17 @@ import Data.Monoid ((<>))
 import Data.List (stripPrefix)
 import qualified Data.Set as Set
 import Hakyll.Web.Sass (sassCompiler)
+import qualified Config as C
 
 
 main :: IO ()
-main = hakyllWith hakyllConfig $ do
+main = do
+  msiteConfig <- C.fromConfig "config.yml"
+  maybe (error "Expected file 'config.yml' not found") main' msiteConfig
+
+
+main' :: C.Site -> IO ()
+main' siteConfig = hakyllWith hakyllConfig $ do
   match (fromGlob "images/**" .||. fromGlob "js/**" .||. fromGlob "lib/**") $ do
     route idRoute
     compile copyFileCompiler
@@ -25,8 +32,8 @@ main = hakyllWith hakyllConfig $ do
                          id . stripPrefix "pages/" . toFilePath)
       `composeRoutes` setExtension "html"
     compile $ pandocCompiler
-      >>= loadAndApplyTemplate "templates/page.html" defaultContext
-      >>= loadAndApplyTemplate "templates/default.html" defaultContext
+      >>= loadAndApplyTemplate "templates/page.html" siteCtx
+      >>= loadAndApplyTemplate "templates/default.html" siteCtx
       >>= relativizeUrls
 
   tags <- buildTags "posts/**" (fromCapture "tags/*.html")
@@ -53,7 +60,7 @@ main = hakyllWith hakyllConfig $ do
       let archiveCtx =
             listField "posts" postCtx (return posts) `mappend`
             constField "title" "Archives"            `mappend`
-            defaultContext
+            siteCtx
       makeItem ""
         >>= loadAndApplyTemplate "templates/archive.html" archiveCtx
         >>= loadAndApplyTemplate "templates/default.html" archiveCtx
@@ -67,7 +74,7 @@ main = hakyllWith hakyllConfig $ do
         indexCtx =
           listField "posts" postCtx (return posts)
           <> constField "title" "Home"
-          <> defaultContext
+          <> siteCtx
       getResourceBody
         >>= applyAsTemplate indexCtx
         >>= loadAndApplyTemplate "templates/default.html" indexCtx
@@ -80,10 +87,13 @@ main = hakyllWith hakyllConfig $ do
     route idRoute
     compile $ do
       let
+        feedConfig =
+          C.feed siteConfig
+
         feedCtx =
           postCtx <> bodyField "description"
       posts <- fmap (take 10) . recentFirst =<< loadAllSnapshots "posts/**" "content"
-      renderAtom atomFeedConfiguration feedCtx posts
+      renderAtom (atomFeedConfiguration feedConfig) feedCtx posts
 
   -- SEO-related stuff
   create ["sitemap.xml"] $ do
@@ -94,9 +104,10 @@ main = hakyllWith hakyllConfig $ do
       let
         crawlPages =
           sitemapPages pages ++ posts
+
         sitemapCtx =
-          mconcat [ listField "entries" defaultContext (return crawlPages)
-                  , defaultContext
+          mconcat [ listField "entries" siteCtx (return crawlPages)
+                  , siteCtx
                   ]
       makeItem ""
         >>= loadAndApplyTemplate "templates/sitemap.xml" sitemapCtx
@@ -105,56 +116,75 @@ main = hakyllWith hakyllConfig $ do
   match "robots.txt" $ do
     route idRoute
     compile $ getResourceBody >>= relativizeUrls
-
-
-ctxWithTags :: Context String -> [(String, Tags)] -> Context String
-ctxWithTags ctx =
-  foldr (\(name, tags) baseCtx -> tagsField name tags <> baseCtx) ctx
-
-
-postCtx :: Context String
-postCtx =
-    dateField "date" "%B %e, %Y"
-    <> teaserField "teaser" "content"
-    -- create a short version of the teaser. Strip out HTML tags and trim.
-    <> mapContext (trim . take 160 . stripTags) (teaserField "teaser-short" "content")
-    <> defaultContext
-  where
-    trim xs =
-      map snd . filter trim' $ zip [0..] xs
       where
-        trim' (ix, x)
-          | ix == 0 || ix == (length xs - 1) =
-              x `notElem` [' ' , '\n', '\t']
-          | otherwise =
-              True
+        ctxWithTags :: Context String -> [(String, Tags)] -> Context String
+        ctxWithTags ctx =
+          foldr (\(name, tags) baseCtx -> tagsField name tags <> baseCtx) ctx
+
+        siteCtx :: Context String
+        siteCtx =
+          generalCtx <> styleCtx <> defaultContext
+          where
+            generalCtx =
+              field "site-title" (toField C.general C.site_title)
+              <> field "head-title" (toField C.general C.head_title)
+              <> field "base-url" (toField C.general C.base_url)
+
+            styleCtx =
+              field "header-colour" (toField C.style C.header_colour)
+              <> field "head-theme-colour" (toField C.style C.head_theme_colour)
+              <> field "footer-colour" (toField C.style C.footer_colour)
+              <> field "footer-btn-colour" (toField C.style C.footer_btn_colour)
+              <> field "footer-link-colour" (toField C.style C.footer_link_colour)
+              <> field "navbar-text-colour-desktop" (toField C.style C.navbar_text_colour_desktop)
+              <> field "navbar-text-colour-mobile" (toField C.style C.navbar_text_colour_mobile)
+
+            toField configObj configField item = do
+              metadata <- getMetadata $ itemIdentifier item
+              return $ configField (configObj siteConfig)
+
+        postCtx :: Context String
+        postCtx =
+          dateField "date" "%B %e, %Y"
+          <> teaserField "teaser" "content"
+        -- create a short version of the teaser. Strip out HTML tags and trim.
+          <> mapContext (trim . take 160 . stripTags) (teaserField "teaser-short" "content")
+          <> siteCtx
+          where
+            trim xs =
+              map snd . filter trim' $ zip [0..] xs
+              where
+                trim' (ix, x)
+                  | ix == 0 || ix == (length xs - 1) =
+                      x `notElem` [' ' , '\n', '\t']
+                  | otherwise =
+                      True
+
+        createTagsRules :: Tags -> (String -> String) -> Rules ()
+        createTagsRules tags mkTitle =
+          tagsRules tags $ \tag pattern -> do
+            route idRoute
+            compile $ do
+              posts <- recentFirst =<< loadAll pattern
+              let
+                ctx =
+                  constField "title" (mkTitle tag)
+                  <> listField "posts" postCtx (return posts)
+                  <> siteCtx
+
+              makeItem ""
+                >>= loadAndApplyTemplate "templates/tag.html" ctx
+                >>= loadAndApplyTemplate "templates/default.html" ctx
+                >>= relativizeUrls
 
 
-createTagsRules :: Tags -> (String -> String) -> Rules ()
-createTagsRules tags mkTitle =
-  tagsRules tags $ \tag pattern -> do
-    route idRoute
-    compile $ do
-      posts <- recentFirst =<< loadAll pattern
-      let
-        ctx =
-          constField "title" (mkTitle tag)
-          <> listField "posts" postCtx (return posts)
-          <> defaultContext
-
-      makeItem ""
-        >>= loadAndApplyTemplate "templates/tag.html" ctx
-        >>= loadAndApplyTemplate "templates/default.html" ctx
-        >>= relativizeUrls
-
-
-atomFeedConfiguration :: FeedConfiguration
-atomFeedConfiguration =
-  FeedConfiguration { feedTitle       = "Materialize-Hakyll"
-                    , feedDescription = "Hakyll theme based on material design"
-                    , feedAuthorName  = "futtetennista"
-                    , feedAuthorEmail = "futtetennista@gmail.com"
-                    , feedRoot        = "https://"
+atomFeedConfiguration :: C.Feed -> FeedConfiguration
+atomFeedConfiguration fs =
+  FeedConfiguration { feedTitle = C.title fs
+                    , feedDescription = C.description fs
+                    , feedAuthorName  = C.author_name fs
+                    , feedAuthorEmail = C.author_email fs
+                    , feedRoot = C.root fs
                     }
 
 
