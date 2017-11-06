@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/futtetennismo/materialize-hakyll/tree/source.svg?style=svg)](https://circleci.com/gh/futtetennismo/materialize-hakyll/tree/source)
+
 # Materialize for Hakyll
 
 This theme is a fork of [materialize-jekyll](https://github.com/mumuxme/materialize-jekyll) originally published by  mumuxme.
