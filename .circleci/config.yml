@@ -34,5 +34,5 @@ jobs:
             #  Commit
             git add .
             git commit -m "[`date '+%F %T %Z'`] New release"
-            # Push
-            git push origin gh-pages:gh-pages
+            # Force push…sledge hammer approach but I don't care about history
+            git push origin gh-pages:gh-pages --force
